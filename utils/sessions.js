@@ -1,37 +1,35 @@
+// utils/sessions.js
 const crypto = require('crypto');
 
-// Simpan token aktif di memory
-const activeSessions = new Set();
+// Menggunakan hash/signature sederhana tanpa menyimpan ke RAM server
+const SECRET = process.env.TURSO_AUTH_TOKEN || 'portal-ujian-secret-key';
 
-function createSession(username) {
-  const token = crypto.randomBytes(16).toString('hex');
-  activeSessions.add(token);
-  return token;
+function createSession(userData) {
+  const payload = JSON.stringify({ ...userData, exp: Date.now() + (24 * 60 * 60 * 1000) });
+  const signature = crypto.createHmac('sha256', SECRET).update(payload).digest('hex');
+  return Buffer.from(payload).toString('base64') + '.' + signature;
 }
 
 function verifySession(token) {
-  if (!token) return false;
-  return activeSessions.has(token);
-}
+  if (!token) return null;
+  try {
+    const [base64Payload, signature] = token.split('.');
+    const payloadText = Buffer.from(base64Payload, 'base64').toString('utf-8');
+    const expectedSignature = crypto.createHmac('sha256', SECRET).update(payloadText).digest('hex');
 
-function removeSession(token) {
-  activeSessions.delete(token);
-}
+    if (signature !== expectedSignature) return null;
 
-function requireAdmin(req, res, next) {
-  const token = req.headers['x-admin-token'] || req.query.token;
-  if (!verifySession(token)) {
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Sesi admin tidak valid atau kedaluwarsa. Silakan login ulang.' 
-    });
+    const data = JSON.parse(payloadText);
+    if (Date.now() > data.exp) return null;
+
+    return data;
+  } catch (err) {
+    return null;
   }
-  next();
 }
 
-module.exports = {
-  createSession,
-  verifySession,
-  removeSession,
-  requireAdmin
-};
+function destroySession(token) {
+  return true;
+}
+
+module.exports = { createSession, verifySession, destroySession };
