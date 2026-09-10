@@ -1,5 +1,4 @@
 const { createClient } = require('@libsql/client');
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 const TURSO_DATABASE_URL = process.env.TURSO_DATABASE_URL;
@@ -8,7 +7,7 @@ const TURSO_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN;
 let db;
 
 if (TURSO_DATABASE_URL && TURSO_AUTH_TOKEN) {
-  // Menggunakan Turso Cloud SQLite jika Environment Variable tersedia (Online/Vercel)
+  // Mode Online / Production (Turso Cloud Database)
   const client = createClient({
     url: TURSO_DATABASE_URL,
     authToken: TURSO_AUTH_TOKEN,
@@ -30,7 +29,8 @@ if (TURSO_DATABASE_URL && TURSO_AUTH_TOKEN) {
   };
   console.log('Terhubung ke Turso Cloud Database');
 } else {
-  // Menggunakan SQLite lokal untuk pengujian di laptop
+  // Fallback lokal jika sqlite3 tersedia
+  const sqlite3 = require('sqlite3').verbose();
   const dbPath = path.join(__dirname, 'portal-ujian.db');
   const localDb = new sqlite3.Database(dbPath);
 
