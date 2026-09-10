@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Portal Ujian</title>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$'],['\\[','\\]']]},svg:{fontCache:'global'}};</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+<div id="g-loading" class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur z-50 flex items-center justify-center text-white font-bold">Memproses...</div>
+<div id="g-toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-xl font-semibold text-sm max-w-xs"></div>
+
+<div id="app-modal" class="hidden fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6">
+    <h3 id="modal-title" class="text-lg font-bold mb-2">Konfirmasi</h3>
+    <p id="modal-message" class="text-sm text-slate-600 mb-5"></p>
+    <div id="modal-actions" class="flex justify-end gap-2"></div>
+  </div>
+</div>
+
+<!-- LANDING -->
+<section id="page-landing" class="page min-h-screen bg-slate-950 flex items-center justify-center px-4">
+  <div class="text-center max-w-sm w-full">
+    <h1 class="text-3xl font-black text-white mb-8">PORTAL UJIAN</h1>
+    <div class="grid grid-cols-2 gap-4">
+      <button onclick="showPage('peserta-login')" class="glass text-white p-5 rounded-2xl hover:bg-white/10">
+        <div class="text-2xl mb-1">✍️</div><div class="font-bold text-sm">Peserta</div>
+      </button>
+      <button onclick="showPage('admin-login')" class="glass text-white p-5 rounded-2xl hover:bg-white/10">
+        <div class="text-2xl mb-1">⚙️</div><div class="font-bold text-sm">Admin</div>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- PESERTA LOGIN -->
+<section id="page-peserta-login" class="page min-h-screen bg-slate-950 flex items-center justify-center px-4">
+  <div class="bg-white p-8 rounded-3xl shadow-xl w-full max-w-sm space-y-3">
+    <h2 class="text-xl font-black text-center">Login Peserta</h2>
+    <input id="p-user" class="inp" placeholder="Username">
+    <input id="p-pass" type="password" class="inp" placeholder="Password" onkeydown="if(event.key==='Enter')doPesertaLogin()">
+    <button class="btn-primary w-full" onclick="doPesertaLogin()">Masuk</button>
+    <button class="w-full text-xs text-slate-400 hover:underline" onclick="showPage('landing')">Kembali</button>
+  </div>
+</section>
+
+<!-- ADMIN LOGIN -->
+<section id="page-admin-login" class="page min-h-screen bg-slate-950 flex items-center justify-center px-4">
+  <div class="bg-white p-8 rounded-3xl shadow-xl w-full max-w-sm space-y-3">
+    <h2 class="text-xl font-black text-center">Login Admin</h2>
+    <input id="a-user" class="inp" placeholder="Username">
+    <input id="a-pass" type="password" class="inp" placeholder="Password" onkeydown="if(event.key==='Enter')doAdminLogin()">
+    <button class="btn-primary w-full" onclick="doAdminLogin()">Masuk</button>
+    <button class="w-full text-xs text-slate-400 hover:underline" onclick="showPage('landing')">Kembali</button>
+  </div>
+</section>
+
+<!-- DASHBOARD PESERTA -->
+<section id="page-user-packages" class="page min-h-screen max-w-4xl mx-auto p-5 hidden">
+  <div class="flex items-start justify-between gap-4 mb-4">
+    <div>
+      <h2 id="dashboard-title" class="text-2xl font-black">Hi, Peserta</h2>
+    </div>
+    <button class="btn-muted text-xs" onclick="logoutPeserta()">Keluar</button>
+  </div>
+  <div id="student-profile-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4"></div>
+  <h3 class="text-lg font-black mb-2">Daftar Paket Tes</h3>
+  <div id="user-package-grid" class="grid gap-3"></div>
+</section>
+
+<!-- TOKEN -->
+<section id="page-token" class="page min-h-screen bg-slate-950 flex items-center justify-center px-4 hidden">
+  <div class="bg-white p-8 rounded-3xl shadow-xl w-full max-w-sm space-y-3">
+    <h3 id="token-package-title" class="text-lg font-black text-center text-purple-700">Paket</h3>
+    <p class="text-xs text-center text-slate-400 font-bold">Masukkan token akses dari admin.</p>
+    <input id="u-token" class="inp text-center font-bold uppercase" placeholder="Token akses">
+    <button class="btn-primary w-full" onclick="submitTokenPaket()">Lanjut</button>
+    <button class="w-full text-xs text-slate-400 hover:underline" onclick="loadStudentPackages()">Kembali</button>
+  </div>
+</section>
+
+<!-- INSTRUKSI -->
+<section id="page-instructions" class="page min-h-screen flex items-center justify-center px-4 hidden">
+  <div class="bg-white p-6 rounded-2xl shadow max-w-sm w-full text-center space-y-4">
+    <h2 class="text-xl font-black text-purple-700">Konfirmasi Tes</h2>
+    <div class="text-left text-sm bg-slate-50 p-4 rounded-xl space-y-2 border">
+      <p>📦 Paket: <b id="instr-paket"></b></p>
+      <p>⏱️ Waktu: <b id="instr-durasi"></b> Menit</p>
+      <p>📝 Soal: <b id="instr-soal"></b> Butir</p>
+      <p>🔁 Percobaan: <b id="instr-attempt"></b></p>
+    </div>
+    <button class="w-full bg-green-600 text-white p-3 rounded-xl font-bold hover:bg-green-700" onclick="startExam()">Mulai Tes</button>
+    <button class="w-full text-xs text-slate-400 hover:underline" onclick="loadStudentPackages()">Batal</button>
+  </div>
+</section>
+
+<!-- EXAM -->
+<section id="page-exam" class="page min-h-screen bg-slate-100 pb-32 hidden">
+  <header class="flex justify-between items-center gap-2 max-w-2xl mx-auto p-3">
+    <div id="exam-paket-name" class="px-4 py-2 rounded-xl bg-purple-700 text-white font-bold text-sm truncate"></div>
+    <div id="exam-timer" class="px-4 py-2 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 font-bold text-sm">00:00</div>
+  </header>
+  <div class="max-w-2xl mx-auto px-3 space-y-3">
+    <div class="card p-5 space-y-4">
+      <div class="flex justify-between items-center border-b pb-3">
+        <span class="text-xs font-black text-slate-400">SOAL <span id="exam-cur">1</span> / <span id="exam-tot">0</span></span>
+        <label class="flex items-center gap-2 text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200 cursor-pointer">
+          <input type="checkbox" id="chk-ragu" onchange="toggleRagu()"> Ragu
+        </label>
+      </div>
+      <p id="exam-qtxt" class="text-base font-medium leading-relaxed"></p>
+      <div id="exam-imgwrap" class="hidden border rounded-2xl bg-slate-50 p-2"><img id="exam-img" class="max-h-64 mx-auto rounded-xl object-contain"></div>
+      <div id="exam-answer-area"></div>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <button id="btn-prev" class="btn-muted" onclick="navQ(-1)">Sebelumnya</button>
+      <button id="btn-next" class="btn-primary" onclick="navQ(1)">Selanjutnya</button>
+    </div>
+    <button class="btn-danger w-full" onclick="confirmSubmit()">Selesai &amp; Kumpulkan</button>
+  </div>
+  <div class="fixed bottom-0 left-0 right-0 bg-white border-t p-3 shadow-xl">
+    <div id="exam-navgrid" class="max-w-2xl mx-auto grid grid-cols-10 gap-2"></div>
+  </div>
+</section>
+
+<!-- HASIL -->
+<section id="page-results" class="page min-h-screen bg-slate-950 flex items-center justify-center px-4 py-8 hidden">
+  <div class="bg-white p-6 rounded-3xl max-w-lg w-full space-y-4 shadow-2xl">
+    <div class="text-center">
+      <h2 class="text-2xl font-black">Hasil Tes</h2>
+      <p id="res-name" class="text-sm font-bold text-slate-500 mt-1"></p>
+    </div>
+    <div id="result-dashboard-view" class="space-y-4">
+      <div class="bg-slate-50 p-6 rounded-2xl border text-center">
+        <div id="res-score" class="text-5xl font-black text-purple-600">—</div>
+        <p id="res-score-max" class="text-xs font-bold text-slate-400 mt-2 uppercase">Skor Akhir</p>
+      </div>
+      <div class="grid grid-cols-3 gap-2 text-xs font-bold text-center">
+        <div class="bg-emerald-50 text-emerald-700 p-3 rounded-xl border">Benar: <span id="res-benar">0</span></div>
+        <div class="bg-slate-50 text-slate-700 p-3 rounded-xl border">Kosong: <span id="res-kosong">0</span></div>
+        <div class="bg-rose-50 text-rose-700 p-3 rounded-xl border">Salah: <span id="res-salah">0</span></div>
+      </div>
+    </div>
+    <div id="result-hidden-score" class="hidden bg-slate-50 border rounded-2xl p-4 text-center text-sm font-bold text-slate-500">Nilai akan segera diumumkan.</div>
+    <div id="result-hidden-review" class="hidden bg-slate-50 border rounded-2xl p-4 text-center text-sm font-bold text-slate-500">Review disembunyikan oleh admin.</div>
+    <div class="grid sm:grid-cols-2 gap-2">
+      <button id="btn-review-result" class="btn-muted hidden" onclick="openReviewFromResult()">Review Soal</button>
+      <button class="btn-primary" onclick="returnToPackages()">Kembali ke Daftar Paket</button>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEW -->
+<section id="page-review" class="page min-h-screen bg-slate-100 pb-32 hidden">
+  <header class="flex justify-between items-center bg-white p-3 border-b sticky top-0 max-w-2xl mx-auto">
+    <div><div id="review-title" class="font-black text-sm">Review</div><div id="review-meta" class="text-xs text-purple-600 font-bold"></div></div>
+    <button class="btn-muted text-xs" onclick="showPage('results')">Kembali</button>
+  </header>
+  <div class="max-w-2xl mx-auto px-3 mt-3 space-y-3">
+    <div class="card p-5 space-y-4">
+      <span class="text-xs font-black text-slate-400">REVIEW <span id="review-cur">1</span> / <span id="review-tot">0</span></span>
+      <p id="review-qtxt" class="text-base font-medium leading-relaxed"></p>
+      <div id="review-imgwrap" class="hidden border rounded-2xl bg-slate-50 p-2"><img id="review-img" class="max-h-64 mx-auto rounded-xl object-contain"></div>
+      <div id="review-answer-area"></div>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <button id="btn-review-prev" class="btn-muted" onclick="navReview(-1)">Sebelumnya</button>
+      <button id="btn-review-next" class="btn-primary" onclick="navReview(1)">Selanjutnya</button>
+    </div>
+  </div>
+  <div class="fixed bottom-0 left-0 right-0 bg-white border-t p-3 shadow-xl">
+    <div id="review-navgrid" class="max-w-2xl mx-auto grid grid-cols-10 gap-2"></div>
+  </div>
+</section>
+
+<!-- ADMIN PANEL -->
+<section id="page-admin" class="page min-h-screen bg-slate-50 hidden">
+  <div class="flex flex-col md:flex-row min-h-screen">
+    <aside class="w-full md:w-64 bg-slate-950 text-slate-400 p-4 space-y-4 md:sticky md:top-0 md:h-screen">
+      <div class="text-center text-white font-black border-b border-slate-800 pb-3">PANEL KONTROL</div>
+      <nav class="flex md:flex-col gap-1 overflow-x-auto">
+        <button class="snav on" id="snav-dashboard" onclick="switchTab('dashboard')">📊 Dashboard</button>
+        <button class="snav" id="snav-pengaturan" onclick="switchTab('pengaturan')">⚙️ Parameter Paket</button>
+        <button class="snav" id="snav-soal" onclick="switchTab('soal')">📚 Modul Soal</button>
+        <button class="snav" id="snav-peserta" onclick="switchTab('peserta')">👥 Akun Peserta</button>
+        <button class="snav" id="snav-adminakun" onclick="switchTab('adminakun')">🔐 Akun Admin</button>
+        <button class="snav" id="snav-hasil" onclick="switchTab('hasil')">🏆 Log Nilai</button>
+      </nav>
+      <button class="w-full bg-rose-950 text-rose-300 p-3 rounded-xl text-xs font-bold" onclick="doAdminLogout()">Keluar</button>
+    </aside>
+
+    <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+      <h2 id="admin-title" class="text-2xl font-black">Dashboard</h2>
+      <div class="h-px bg-slate-200 my-4"></div>
+
+      <div class="admin-tab on" id="tab-dashboard">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div class="card p-5"><p class="text-xs font-bold text-slate-400 uppercase">Soal</p><p id="stat-soal" class="text-3xl font-black text-purple-600">—</p></div>
+          <div class="card p-5"><p class="text-xs font-bold text-slate-400 uppercase">Peserta</p><p id="stat-peserta" class="text-3xl font-black text-emerald-600">—</p></div>
+          <div class="card p-5"><p class="text-xs font-bold text-slate-400 uppercase">Paket</p><p id="stat-paket" class="text-3xl font-black text-cyan-600">—</p></div>
+          <div class="card p-5"><p class="text-xs font-bold text-slate-400 uppercase">Attempt</p><p id="stat-hasil" class="text-3xl font-black text-amber-600">—</p></div>
+        </div>
+      </div>
+
+      <div class="admin-tab space-y-4" id="tab-pengaturan">
+        <div class="card p-5 space-y-3">
+          <div class="flex justify-between items-center gap-3">
+            <span class="text-sm font-black uppercase">Pengaturan Paket</span>
+            <button class="btn-primary text-xs py-2" onclick="addNewPackageRow()">+ Tambah Paket</button>
+          </div>
+          <p class="text-xs text-slate-500 font-bold">Kesempatan: isi 1 = sekali, 0 = tidak terbatas.</p>
+          <div class="overflow-x-auto border rounded-xl bg-white">
+            <table class="w-full text-left text-xs min-w-[1100px]">
+              <thead><tr class="bg-slate-100 border-b font-bold"><th class="p-2">Paket</th><th class="p-2">Token</th><th class="p-2">Menit</th><th class="p-2">Aktif</th><th class="p-2">Tampil Nilai</th><th class="p-2">Tampil Kunci</th><th class="p-2">Acak Soal</th><th class="p-2">Acak Opsi</th><th class="p-2">Metode Skor</th><th class="p-2">Kesempatan</th><th class="p-2">Hapus</th></tr></thead>
+              <tbody id="tbl-setting-body" class="divide-y"></tbody>
+            </table>
+          </div>
+          <button class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold" onclick="saveAllSettingsMulti()">Simpan Parameter</button>
+        </div>
+      </div>
+
+      <div class="admin-tab" id="tab-soal">
+        <div class="grid lg:grid-cols-3 gap-6 items-start">
+          <div class="card p-5 space-y-3">
+            <div class="flex justify-between items-center">
+              <h3 class="font-black text-xs text-slate-400 uppercase" id="form-soal-title">Input Soal</h3>
+              <button class="hidden text-xs font-black text-slate-400 hover:text-red-600" id="btn-cancel-edit" onclick="resetSoalForm()">Batal Edit</button>
+            </div>
+            <input type="hidden" id="editing-soal-id">
+            <select id="inp-target-paket" class="inp font-bold"></select>
+            <select id="inp-tipe" class="inp font-bold" onchange="adjustFormTipeSoal()">
+              <option value="pg">Pilihan Ganda</option><option value="mc">Multiple Choice</option>
+              <option value="isian">Isian Singkat</option><option value="essay">Essay / Uraian</option>
+            </select>
+            <textarea id="inp-soal" class="inp" rows="4" placeholder="Teks soal..."></textarea>
+            <div>
+              <input type="file" id="file-gambar" accept="image/*" class="w-full text-xs bg-slate-50 p-2 border rounded-xl">
+              <input type="hidden" id="inp-gambar">
+              <div class="grid grid-cols-2 gap-2 mt-2">
+                <button class="btn-muted text-xs py-2" onclick="uploadGambarAdmin()">Upload Gambar</button>
+                <button class="btn-muted text-xs py-2" onclick="clearGambarAdmin()">Hapus URL</button>
+              </div>
+              <p id="upload-status" class="text-[11px] text-slate-400 font-bold mt-1"></p>
+              <img id="img-preview" class="hidden mt-2 max-h-32 rounded-xl border mx-auto object-contain">
+            </div>
+            <div id="wrapper-opsi-pg" class="space-y-2 border-t pt-3">
+              <input class="inp p-2 text-xs" id="inp-a" placeholder="Opsi A">
+              <input class="inp p-2 text-xs" id="inp-b" placeholder="Opsi B">
+              <input class="inp p-2 text-xs" id="inp-c" placeholder="Opsi C">
+              <input class="inp p-2 text-xs" id="inp-d" placeholder="Opsi D">
+              <input class="inp p-2 text-xs" id="inp-e" placeholder="Opsi E (opsional)">
+            </div>
+            <div class="border-t pt-3">
+              <label class="mini-label">Kunci Jawaban</label>
+              <input class="inp hidden" id="inp-kunci-teks" placeholder="Ketik kunci...">
+              <div id="box-kunci-options" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div class="border-t pt-3 grid grid-cols-3 gap-2">
+              <div><label class="mini-label">Benar</label><input type="number" step="0.01" id="inp-poin-benar" class="inp p-2 text-xs" value="1"></div>
+              <div><label class="mini-label">Kosong</label><input type="number" step="0.01" id="inp-poin-kosong" class="inp p-2 text-xs" value="0"></div>
+              <div><label class="mini-label">Salah</label><input type="number" step="0.01" id="inp-poin-salah" class="inp p-2 text-xs" value="0"></div>
+            </div>
+            <button class="w-full btn-primary" id="btn-submit-soal" onclick="submitSoalForm()">Simpan Soal</button>
+          </div>
+
+          <div class="lg:col-span-2 card p-5 space-y-3">
+            <div class="flex justify-between items-center border-b pb-3">
+              <h3 class="font-black text-sm">BUTIR SOAL</h3>
+              <select id="filter-soal-paket" class="p-2 border rounded-xl text-xs font-bold text-purple-700 bg-purple-50" onchange="renderSoalListFiltered()"></select>
+            </div>
+            <div class="bg-slate-50 border rounded-2xl p-3 space-y-2">
+              <div class="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+                <p class="text-xs font-black">Ekspor modul soal ke PDF</p>
+                <label class="flex items-center gap-2 text-xs font-bold"><input type="checkbox" id="pdf-include-kunci"> Sertakan kunci</label>
+                <button class="btn-primary text-xs py-2" onclick="exportModulePdfAdmin()">Ekspor PDF</button>
+              </div>
+            </div>
+            <div id="soal-list-wrapper" class="space-y-3 max-h-[600px] overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-tab" id="tab-peserta">
+        <div class="card p-5 space-y-3">
+          <div class="flex justify-between items-center border-b pb-3">
+            <span class="text-sm font-black uppercase">Akun Peserta</span>
+            <button class="btn-primary text-xs py-2" onclick="addPesertaRow()">+ Tambah</button>
+          </div>
+          <p class="text-[11px] text-slate-400 font-bold">Kosongkan kolom password saat edit jika tidak ingin mengubah password.</p>
+          <div class="overflow-x-auto"><table class="w-full text-left text-xs min-w-[700px]">
+            <thead><tr class="bg-slate-100"><th class="p-2">Username</th><th class="p-2">Password Baru</th><th class="p-2">Nama</th><th class="p-2">No Peserta</th><th class="p-2">Status</th><th class="p-2">Hapus</th></tr></thead>
+            <tbody id="tbl-peserta-body" class="divide-y"></tbody>
+          </table></div>
+          <button class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold" onclick="savePesertaTable()">Simpan</button>
+        </div>
+      </div>
+
+      <div class="admin-tab" id="tab-adminakun">
+        <div class="card p-5 space-y-3">
+          <div class="flex justify-between items-center border-b pb-3">
+            <span class="text-sm font-black uppercase">Akun Admin</span>
+            <button class="btn-primary text-xs py-2" onclick="addAdminRow()">+ Tambah</button>
+          </div>
+          <p class="text-[11px] text-slate-400 font-bold">Kosongkan kolom password saat edit jika tidak ingin mengubah password.</p>
+          <div class="overflow-x-auto"><table class="w-full text-left text-xs min-w-[600px]">
+            <thead><tr class="bg-slate-100"><th class="p-2">Username</th><th class="p-2">Password Baru</th><th class="p-2">Nama</th><th class="p-2">Status</th><th class="p-2">Hapus</th></tr></thead>
+            <tbody id="tbl-admin-body" class="divide-y"></tbody>
+          </table></div>
+          <button class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold" onclick="saveAdminTable()">Simpan</button>
+        </div>
+      </div>
+
+      <div class="admin-tab card overflow-x-auto" id="tab-hasil">
+        <div class="p-4 border-b bg-slate-50 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+          <p class="text-xs font-black">Hitung ulang skor IRT (minimal 2 peserta unik)</p>
+          <div class="flex flex-wrap gap-2">
+            <select id="irt-recalc-paket" class="p-2 border rounded-xl text-xs font-bold"></select>
+            <button class="btn-primary text-xs py-2" onclick="recalculateIrtAdmin()">Hitung Ulang</button>
+            <button class="btn-muted text-xs py-2" onclick="showIrtWeightsAdmin()">Lihat Bobot Soal</button>
+          </div>
+        </div>
+        <div id="irt-weight-box" class="hidden p-4 border-b bg-white"></div>
+        <table class="w-full text-left text-xs min-w-[1000px]">
+          <thead><tr class="bg-slate-100 border-b font-bold"><th class="p-3">Paket</th><th class="p-3">Nama</th><th class="p-3">Username</th><th class="p-3">No Peserta</th><th class="p-3">Attempt</th><th class="p-3">Skor</th><th class="p-3">B/K/S</th><th class="p-3">Metode</th><th class="p-3">Pelanggaran</th><th class="p-3">Selesai</th><th class="p-3">Aksi</th></tr></thead>
+          <tbody id="hasil-tbody" class="divide-y"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</section>
+
+<script src="/app.js"></script>
+</body>
+</html>
